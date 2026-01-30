@@ -1,0 +1,27 @@
+{
+  "name": "@cosmicjs/skills",
+  "version": "1.0.0",
+  "description": "AI coding assistant skills for Cosmic headless CMS",
+  "keywords": [
+    "cosmic",
+    "cosmicjs",
+    "cms",
+    "headless-cms",
+    "skills",
+    "agent-skills",
+    "ai",
+    "cursor",
+    "claude-code",
+    "copilot"
+  ],
+  "author": "Cosmic <hello@cosmicjs.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cosmicjs/skills.git"
+  },
+  "homepage": "https://www.cosmicjs.com",
+  "bugs": {
+    "url": "https://github.com/cosmicjs/skills/issues"
+  }
+}
