@@ -43,7 +43,7 @@ const { objects: posts } = await cosmic.objects
 
 - [Cosmic Documentation](https://www.cosmicjs.com/docs)
 - [SDK on npm](https://www.npmjs.com/package/@cosmicjs/sdk)
-- [Discord Community](https://discord.gg/cosmicjs)
+- [Discord Community](https://discord.com/invite/MSCwQ7D6Mg)
 
 ## License
 
