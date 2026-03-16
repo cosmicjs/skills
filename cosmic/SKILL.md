@@ -145,7 +145,7 @@ await cosmic.objectTypes.insertOne({
 | `number` | Numeric value | `number` |
 | `date` | Date picker | `"YYYY-MM-DD"` |
 | `switch` | Boolean toggle | `true/false` |
-| `select-dropdown` | Dropdown selection | `string` |
+| `select-dropdown` | Dropdown selection | `{key: string, value: string}` |
 | `radio-buttons` | Radio selection | `string` |
 | `check-boxes` | Multiple selection | `string[]` |
 | `file` | Single media | Media `name` |
@@ -422,6 +422,37 @@ const post = await cosmic.objects
   .findOne({ type: 'posts', slug, locale: 'es' })
 ```
 
+## Select-Dropdown Values
+
+The `select-dropdown` metafield type returns `{key: string, value: string}` objects from the API, not plain strings. Rendering these directly in React JSX causes "Objects are not valid as a React child" errors.
+
+Always include this helper in your project (e.g., `lib/cosmic.ts`) and use it when rendering any metadata value in JSX:
+
+```typescript
+export function getMetafieldValue(field: unknown): string {
+  if (field === null || field === undefined) return '';
+  if (typeof field === 'string') return field;
+  if (typeof field === 'number' || typeof field === 'boolean') return String(field);
+  if (typeof field === 'object' && field !== null && 'value' in field) {
+    return String((field as { value: unknown }).value);
+  }
+  if (typeof field === 'object' && field !== null && 'key' in field) {
+    return String((field as { key: unknown }).key);
+  }
+  return '';
+}
+```
+
+The function is safe for all types (strings, numbers, booleans pass through unchanged), so wrap every `metadata.*` value rendered in JSX:
+
+```tsx
+// Wrong: may crash if field is select-dropdown
+<span>{product.metadata?.category}</span>
+
+// Correct: always safe
+<span>{getMetafieldValue(product.metadata?.category)}</span>
+```
+
 ## Key Reminders
 
 1. **Object type is the SLUG** - Use `type: 'blog-posts'`, not `type: 'Blog Posts'`
@@ -430,6 +461,7 @@ const post = await cosmic.objects
 4. **Never expose `writeKey`** - Keep it server-side only
 5. **Use `props()`** - Always specify needed properties for performance
 6. **imgix for images** - Use `imgix_url` with query params for optimizations
+7. **Wrap metadata in JSX** - Use `getMetafieldValue()` for all `metadata.*` values rendered in JSX
 
 ## Resources
 
