@@ -145,7 +145,9 @@ await cosmic.objectTypes.insertOne({
 | `number` | Numeric value | `number` |
 | `date` | Date picker | `"YYYY-MM-DD"` |
 | `switch` | Boolean toggle | `true/false` |
-| `select-dropdown` | Dropdown selection | `{key: string, value: string}` |
+| `select` | Single selection (preferred) | `string` |
+| `multi-select` | Multiple selection | `string[]` |
+| `select-dropdown` | Dropdown selection (deprecated, use `select`) | `{key: string, value: string}` |
 | `radio-buttons` | Radio selection | `string` |
 | `check-boxes` | Multiple selection | `string[]` |
 | `file` | Single media | Media `name` |
@@ -422,11 +424,21 @@ const post = await cosmic.objects
   .findOne({ type: 'posts', slug, locale: 'es' })
 ```
 
-## Select-Dropdown Values
+## Select and Multi-Select Values
 
-The `select-dropdown` metafield type returns `{key: string, value: string}` objects from the API, not plain strings. Rendering these directly in React JSX causes "Objects are not valid as a React child" errors.
+For new content models, prefer `select` (single selection) and `multi-select` (multiple selection) over the legacy `select-dropdown` type.
 
-Always include this helper in your project (e.g., `lib/cosmic.ts`) and use it when rendering any metadata value in JSX:
+- **`select`** returns a plain `string` from the API. No helper needed.
+- **`multi-select`** returns a `string[]` from the API. No helper needed.
+- **`select-dropdown`** (deprecated) returns `{key: string, value: string}` objects, which can cause "Objects are not valid as a React child" errors in JSX.
+
+```tsx
+// select and multi-select: use values directly
+<span>{product.metadata?.status}</span>
+{product.metadata?.tags?.map(tag => <span key={tag}>{tag}</span>)}
+```
+
+If your project still uses legacy `select-dropdown` fields, include this helper in your project (e.g., `lib/cosmic.ts`):
 
 ```typescript
 export function getMetafieldValue(field: unknown): string {
@@ -443,13 +455,13 @@ export function getMetafieldValue(field: unknown): string {
 }
 ```
 
-The function is safe for all types (strings, numbers, booleans pass through unchanged), so wrap every `metadata.*` value rendered in JSX:
+The function is safe for all types (strings, numbers, booleans pass through unchanged), so wrap legacy `select-dropdown` metadata values rendered in JSX:
 
 ```tsx
 // Wrong: may crash if field is select-dropdown
 <span>{product.metadata?.category}</span>
 
-// Correct: always safe
+// Correct: always safe for legacy select-dropdown
 <span>{getMetafieldValue(product.metadata?.category)}</span>
 ```
 
@@ -461,7 +473,8 @@ The function is safe for all types (strings, numbers, booleans pass through unch
 4. **Never expose `writeKey`** - Keep it server-side only
 5. **Use `props()`** - Always specify needed properties for performance
 6. **imgix for images** - Use `imgix_url` with query params for optimizations
-7. **Wrap metadata in JSX** - Use `getMetafieldValue()` for all `metadata.*` values rendered in JSX
+7. **Use `select` over `select-dropdown`** - New content models should use `select` (returns plain strings) instead of `select-dropdown` (returns objects)
+8. **Wrap legacy metadata in JSX** - Use `getMetafieldValue()` for `select-dropdown` metadata values rendered in JSX
 
 ## Resources
 
