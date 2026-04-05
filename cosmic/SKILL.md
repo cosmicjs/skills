@@ -166,7 +166,7 @@ Metafields support validation properties to enforce data quality:
 | Property | Type | Description |
 |----------|------|-------------|
 | `required` | `boolean` | A value must be provided |
-| `unique` | `boolean` | Value must be unique across all Objects of the same type. Applies to: text, textarea, number, date, select |
+| `unique` | `boolean` | Value must be unique across all Objects of the same type. Applies to top-level text, textarea, number, date, select Metafields (not supported inside Parent or Repeater groups) |
 | `regex` | `string` | Restrict value to match a regular expression |
 | `regex_message` | `string` | Message shown when regex validation fails |
 | `minlength` | `number` | Minimum character length (text, textarea) |
