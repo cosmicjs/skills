@@ -108,6 +108,32 @@ await cosmic.objects.updateOne('object-id', {
 await cosmic.objects.deleteOne('object-id')
 ```
 
+### Batch Operations
+
+Create, update, and delete multiple Objects in a single API request (max 25 operations). Each operation succeeds or fails independently.
+
+```typescript
+const response = await fetch(
+  `https://api.cosmicjs.com/v3/buckets/${BUCKET_SLUG}/objects/batch`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${WRITE_KEY}`,
+    },
+    body: JSON.stringify({
+      operations: [
+        { method: 'add', object: { title: 'Post 1', type: 'posts', metadata: { content: '...' } } },
+        { method: 'add', object: { title: 'Post 2', type: 'posts', metadata: { content: '...' } } },
+        { method: 'edit', object_id: 'OBJECT_ID', object: { title: 'Updated' } },
+        { method: 'delete', object_id: 'OBJECT_ID_2' },
+      ],
+    }),
+  }
+)
+// Response: { operations: [{ method, status, object/message }, ...] }
+```
+
 ## Object Types
 
 Define content structure with Object types.
@@ -167,6 +193,7 @@ Metafields support validation properties to enforce data quality:
 |----------|------|-------------|
 | `required` | `boolean` | A value must be provided |
 | `unique` | `boolean` | Value must be unique across all Objects of the same type. Applies to top-level text, textarea, number, date, select Metafields (not supported inside Parent or Repeater groups) |
+| `show_when` | `object` | Conditional visibility: `{ key, op, value }`. Show field when sibling field matches condition. Ops: `eq`, `neq`, `exists`, `not_exists`. Hidden fields skip required validation. Top-level only. |
 | `regex` | `string` | Restrict value to match a regular expression |
 | `regex_message` | `string` | Message shown when regex validation fails |
 | `minlength` | `number` | Minimum character length (text, textarea) |
