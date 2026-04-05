@@ -159,6 +159,31 @@ await cosmic.objectTypes.insertOne({
 | `repeater` | Repeatable group | `array` |
 | `parent` | Nested group | `object` |
 
+## Metafield Validation
+
+Metafields support validation properties to enforce data quality:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `required` | `boolean` | A value must be provided |
+| `unique` | `boolean` | Value must be unique across all Objects of the same type. Applies to: text, textarea, number, date, select |
+| `regex` | `string` | Restrict value to match a regular expression |
+| `regex_message` | `string` | Message shown when regex validation fails |
+| `minlength` | `number` | Minimum character length (text, textarea) |
+| `maxlength` | `number` | Maximum character length (text, textarea) |
+
+```typescript
+// Object type with validation
+await cosmic.objectTypes.insertOne({
+  title: 'Contacts',
+  slug: 'contacts',
+  metafields: [
+    { title: 'Email', key: 'email', type: 'text', required: true, unique: true },
+    { title: 'Name', key: 'name', type: 'text', required: true, minlength: 2 }
+  ]
+})
+```
+
 ## Queries
 
 Filter content using MongoDB-style queries:
