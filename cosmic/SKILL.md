@@ -110,28 +110,17 @@ await cosmic.objects.deleteOne('object-id')
 
 ### Batch Operations
 
-Create, update, and delete multiple Objects in a single API request (max 25 operations). Each operation succeeds or fails independently.
+Create, update, and delete multiple Objects in a single call (max 25 operations). Each operation succeeds or fails independently.
 
 ```typescript
-const response = await fetch(
-  `https://api.cosmicjs.com/v3/buckets/${BUCKET_SLUG}/objects/batch`,
-  {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${WRITE_KEY}`,
-    },
-    body: JSON.stringify({
-      operations: [
-        { method: 'add', object: { title: 'Post 1', type: 'posts', metadata: { content: '...' } } },
-        { method: 'add', object: { title: 'Post 2', type: 'posts', metadata: { content: '...' } } },
-        { method: 'edit', object_id: 'OBJECT_ID', object: { title: 'Updated' } },
-        { method: 'delete', object_id: 'OBJECT_ID_2' },
-      ],
-    }),
-  }
-)
-// Response: { operations: [{ method, status, object/message }, ...] }
+// Using the SDK
+const result = await cosmic.objects.batch([
+  { method: 'add', object: { title: 'Post 1', type: 'posts', metadata: { content: '...' } } },
+  { method: 'add', object: { title: 'Post 2', type: 'posts', metadata: { content: '...' } } },
+  { method: 'edit', object_id: 'OBJECT_ID', object: { title: 'Updated' } },
+  { method: 'delete', object_id: 'OBJECT_ID_2' },
+])
+// result.operations: [{ method, status, object/message }, ...]
 ```
 
 ## Object Types
