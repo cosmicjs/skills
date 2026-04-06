@@ -108,6 +108,21 @@ await cosmic.objects.updateOne('object-id', {
 await cosmic.objects.deleteOne('object-id')
 ```
 
+### Batch Operations
+
+Create, update, and delete multiple Objects in a single call (max 25 operations). Each operation succeeds or fails independently.
+
+```typescript
+// Using the SDK
+const result = await cosmic.objects.batch([
+  { method: 'add', object: { title: 'Post 1', type: 'posts', metadata: { content: '...' } } },
+  { method: 'add', object: { title: 'Post 2', type: 'posts', metadata: { content: '...' } } },
+  { method: 'edit', object_id: 'OBJECT_ID', object: { title: 'Updated' } },
+  { method: 'delete', object_id: 'OBJECT_ID_2' },
+])
+// result.operations: [{ method, status, object/message }, ...]
+```
+
 ## Object Types
 
 Define content structure with Object types.
@@ -158,6 +173,32 @@ await cosmic.objectTypes.insertOne({
 | `color` | Color picker | `"#hex"` |
 | `repeater` | Repeatable group | `array` |
 | `parent` | Nested group | `object` |
+
+## Metafield Validation
+
+Metafields support validation properties to enforce data quality:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `required` | `boolean` | A value must be provided |
+| `unique` | `boolean` | Value must be unique across all Objects of the same type. Applies to top-level text, textarea, number, date, select Metafields (not supported inside Parent or Repeater groups) |
+| `show_when` | `object` | Conditional visibility: `{ key, op, value }`. Show field when sibling field matches condition. Ops: `eq`, `neq`, `exists`, `not_exists`. Hidden fields skip required validation. Top-level only. |
+| `regex` | `string` | Restrict value to match a regular expression |
+| `regex_message` | `string` | Message shown when regex validation fails |
+| `minlength` | `number` | Minimum character length (text, textarea) |
+| `maxlength` | `number` | Maximum character length (text, textarea) |
+
+```typescript
+// Object type with validation
+await cosmic.objectTypes.insertOne({
+  title: 'Contacts',
+  slug: 'contacts',
+  metafields: [
+    { title: 'Email', key: 'email', type: 'text', required: true, unique: true },
+    { title: 'Name', key: 'name', type: 'text', required: true, minlength: 2 }
+  ]
+})
+```
 
 ## Queries
 
