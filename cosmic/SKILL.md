@@ -1,6 +1,6 @@
 ---
 name: cosmic
-description: Build applications with Cosmic headless CMS using the JavaScript SDK. Covers Objects, Media, AI generation (text, images, video), content modeling with Metafields, and queries. Use when working with Cosmic CMS, @cosmicjs/sdk, headless content, or building JAMstack applications.
+description: Build applications with Cosmic headless CMS using the JavaScript SDK. Covers Objects, Media, AI generation (text, images, video), content modeling with Metafields, and queries. Also covers agent self-signup (POST /v3/agents/sign-up) for provisioning a free-tier project + bucket when the user has no Cosmic account yet. Use when working with Cosmic CMS, @cosmicjs/sdk, headless content, building JAMstack applications, or onboarding a user who does not yet have Cosmic credentials.
 ---
 
 # Cosmic CMS
@@ -15,6 +15,95 @@ Build content-powered applications with the [Cosmic](https://www.cosmicjs.com) h
 bun add @cosmicjs/sdk
 # or: npm install @cosmicjs/sdk
 ```
+
+## No Cosmic account? Provision one (Agent signup)
+
+**When to use:** the user wants to build with Cosmic but has no `COSMIC_BUCKET_SLUG`/`COSMIC_READ_KEY`/`COSMIC_WRITE_KEY`, no `.env`, and no account on `app.cosmicjs.com`. Do **not** ask them to manually sign up: provision a project for them with one API call instead.
+
+This flow is not in `@cosmicjs/sdk` yet (the SDK is bucket-scoped). Use `fetch` for the three signup endpoints, then drop the returned keys straight into `createBucketClient`.
+
+### Step 1: Sign up (no auth required)
+
+```typescript
+const signup = await fetch('https://dapi.cosmicjs.com/v3/agents/sign-up', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    human_email: 'user@example.com',   // ASK THE USER, do not guess
+    project_name: 'Recipe Blog',       // derive from what they're building
+    agent_id: 'cursor',                // your platform: 'cursor', 'claude-code', etc.
+  }),
+}).then((r) => r.json());
+
+// signup => {
+//   agent_key:  'agk_...',           // persist this; needed for verify/status
+//   bucket:     { slug, read_key, write_key },  // raw keys, ready to use
+//   claim_url:  'https://app.cosmicjs.com/claim?token=agk_...',
+//   limits:     { ai_credits_remaining: 0, media_mb_total: 5, objects_max: 50 },
+//   auto_delete_after_days: 14,
+// }
+```
+
+Immediately write the bucket keys + `agent_key` to `.env` (or wherever the project stores secrets), and gitignore them:
+
+```bash
+COSMIC_BUCKET_SLUG=recipe-blog-...
+COSMIC_READ_KEY=...
+COSMIC_WRITE_KEY=...
+COSMIC_AGENT_KEY=agk_...
+```
+
+You can now use the SDK normally for objects, media, and reading. **AI generation is blocked** until step 3.
+
+### Step 2: Tell the human about the OTP
+
+Cosmic emailed the human a 6-digit code and a claim URL. Surface both:
+
+```
+A 6-digit verification code was sent to user@example.com.
+Paste it here when you have it, or open this link to verify in the dashboard:
+https://app.cosmicjs.com/claim?token=agk_...
+```
+
+You (the agent) will never see the code yourself: the user has to fetch it from their inbox and hand it back. Wait for them.
+
+### Step 3: Verify (lifts restricted-mode limits)
+
+```typescript
+await fetch('https://dapi.cosmicjs.com/v3/agents/verify', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${process.env.COSMIC_AGENT_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ code: '123456' }),  // field is `code`, NOT `otp_code`
+});
+```
+
+After this returns 200, the bucket is on standard free-tier limits and `cosmic.ai.*` works.
+
+### Status & recovery
+
+If you lose the sign-up response (e.g. user closed the chat), recover via:
+
+```typescript
+const status = await fetch('https://dapi.cosmicjs.com/v3/agents/status', {
+  headers: { Authorization: `Bearer ${process.env.COSMIC_AGENT_KEY}` },
+}).then((r) => r.json());
+// status.bucket.{slug,read_key,write_key}, status.auth_type, status.limits
+```
+
+### Rules
+
+- **`human_email` must come from the user.** Never make one up or use a placeholder. Ask if you don't have it.
+- **The signup is idempotent** by `human_email` + `agent_id`. Re-running it issues a fresh OTP and returns the existing project instead of creating duplicates.
+- **On `409 user_already_exists`**: stop. Do not retry with a different email. The response includes a `claim_existing_url`. Tell the user: "An account already exists for that email. Log in at `app.cosmicjs.com` to grant access to your existing buckets."
+- **AI generation returns `402 { code: "agent_unclaimed_limit", action: "ai_generate" }` while unclaimed.** Catch that, and prompt the user to complete step 3 before retrying.
+- **Restricted limits while unclaimed:** 50 objects, 5 MB total media, 0 AI credits.
+- **Unclaimed projects are hard-deleted after 14 days.** Plan the build around getting to step 3 in the same session.
+- **Persist `agent_key`** (not just bucket keys). Without it, verify/status are inaccessible and the user has to fall back to the dashboard claim URL.
+
+If the user already has Cosmic credentials, **skip this section entirely** and jump to Setup below.
 
 ## Setup
 
@@ -508,18 +597,21 @@ The function is safe for all types (strings, numbers, booleans pass through unch
 
 ## Key Reminders
 
-1. **Object type is the SLUG** - Use `type: 'blog-posts'`, not `type: 'Blog Posts'`
-2. **Media uses `name`** - Reference media by `name` property, not URL
-3. **Relations use `id`** - Reference related Objects by `id`, not slug
-4. **Never expose `writeKey`** - Keep it server-side only
-5. **Use `props()`** - Always specify needed properties for performance
-6. **imgix for images** - Use `imgix_url` with query params for optimizations
-7. **Use `select` over `select-dropdown`** - New content models should use `select` (returns plain strings) instead of `select-dropdown` (returns objects)
-8. **Wrap legacy metadata in JSX** - Use `getMetafieldValue()` for `select-dropdown` metadata values rendered in JSX
+1. **No credentials? Use agent signup** - If the user has no `COSMIC_*` env vars and no account, call `POST /v3/agents/sign-up` (see "No Cosmic account?" section above). Never ask the user to manually go sign up.
+2. **Object type is the SLUG** - Use `type: 'blog-posts'`, not `type: 'Blog Posts'`
+3. **Media uses `name`** - Reference media by `name` property, not URL
+4. **Relations use `id`** - Reference related Objects by `id`, not slug
+5. **Never expose `writeKey`** - Keep it server-side only
+6. **Use `props()`** - Always specify needed properties for performance
+7. **imgix for images** - Use `imgix_url` with query params for optimizations
+8. **Use `select` over `select-dropdown`** - New content models should use `select` (returns plain strings) instead of `select-dropdown` (returns objects)
+9. **Wrap legacy metadata in JSX** - Use `getMetafieldValue()` for `select-dropdown` metadata values rendered in JSX
 
 ## Resources
 
 - [Documentation](https://www.cosmicjs.com/docs)
 - [API Reference](https://www.cosmicjs.com/docs/api)
+- [Agent signup flow](https://www.cosmicjs.com/docs/agent-skills#agent-signup) - end-to-end onboarding with no prior Cosmic account
+- [Agents API reference](https://www.cosmicjs.com/docs/api/agents) - `/v3/agents/sign-up`, `/verify`, `/status` details and error codes
 - [SDK on npm](https://www.npmjs.com/package/@cosmicjs/sdk)
 - [Discord Community](https://discord.gg/cosmicjs)
