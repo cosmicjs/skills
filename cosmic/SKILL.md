@@ -245,7 +245,8 @@ await cosmic.objectTypes.insertOne({
 | `text` | Single line text | `string` |
 | `textarea` | Multi-line text | `string` |
 | `markdown` | Markdown editor | `string` |
-| `html-textarea` | Rich HTML editor | `string` |
+| `rich-text` | Rich text editor (preferred for long-form) | `string` (markdown + tokens) |
+| `html-textarea` | Rich HTML editor (deprecated, use `rich-text`) | `string` |
 | `number` | Numeric value | `number` |
 | `date` | Date picker | `"YYYY-MM-DD"` |
 | `switch` | Boolean toggle | `true/false` |
@@ -262,6 +263,8 @@ await cosmic.objectTypes.insertOne({
 | `color` | Color picker | `"#hex"` |
 | `repeater` | Repeatable group | `array` |
 | `parent` | Nested group | `object` |
+
+A `rich-text` value is markdown prose plus optional `{{name /}}` block tokens that reference existing bucket-defined blocks, and may embed an existing object inline with `{{object type="type-slug" id="OBJECT_ID" slug="object-slug" /}}` (existing objects only; never invent ids). `object`/`objects` are reserved block names. Prefer `rich-text` over the deprecated `html-textarea` for new long-form fields.
 
 ## Metafield Validation
 
