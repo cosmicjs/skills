@@ -544,11 +544,25 @@ const totalPages = Math.ceil(total / limit)
 
 ### Draft Preview
 
+Dashboard live preview issues a short-lived `preview_token` (1 hour, bound to the bucket). Pass it on the server-side client. Do not put the token or write key in a client component. Visitors without a token must see published content only.
+
 ```typescript
+import { createBucketClient } from '@cosmicjs/sdk'
+
+const cosmic = createBucketClient({
+  bucketSlug: process.env.COSMIC_BUCKET_SLUG!,
+  readKey: process.env.COSMIC_READ_KEY!,
+  previewToken, // from ?preview_token= or cosmic_preview cookie
+})
+
 const post = await cosmic.objects
   .findOne({ type: 'posts', slug })
-  .status('any')  // Include drafts
+  .status(previewToken ? 'any' : 'published')
 ```
+
+Autopilot and agent-built Next.js apps inject `getCosmic()` in `lib/cosmic-preview.ts`. Use that helper for all page reads. Custom sites: add `?preview_token=` handling and `Content-Security-Policy: frame-ancestors 'self' http://localhost:3040 http://localhost:3000 https://app.cosmicjs.com https://*.cosmicjs.com`. Do not send `X-Frame-Options: DENY`.
+
+The dashboard Preview button appears only after the Object type has `preview_link` set (Object type > Additional settings, or `update_object_type` with `preview_link`). Typical value: `{production_url}/api/cosmic-preview?object_id=[object_id]`. Do not set it until that URL exists on the live site.
 
 ### Localized Content
 
