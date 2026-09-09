@@ -434,7 +434,15 @@ const image = await cosmic.ai.generateImage({
 })
 console.log(image.media.url)
 
-// With reference images (Gemini only)
+// SVG logos, icons, and illustrations. Display with media.url (not imgix_url).
+const icon = await cosmic.ai.generateImage({
+  prompt: 'Minimal coffee cup icon, flat vector, no text',
+  format: 'svg',
+  aspect_ratio: '1:1'
+})
+console.log(icon.media.url)
+
+// With reference images (Gemini PNG only)
 const styled = await cosmic.ai.generateImage({
   prompt: 'Same style but with ocean',
   reference_images: ['https://cdn.cosmicjs.com/style-ref.jpg']
